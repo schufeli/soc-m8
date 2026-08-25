@@ -1,1 +1,437 @@
-
+{
+  "kind": "soc-m8-templates",
+  "schemaVersion": 1,
+  "name": "SOC-M8 default templates",
+  "updated": "2026-05-25",
+  "categories": [
+    { "id": "malware", "label": "Malware Analysis" },
+    { "id": "identity", "label": "Identity & Access" },
+    { "id": "network", "label": "Network & Perimeter" },
+    { "id": "email", "label": "Email & Phishing" },
+    { "id": "endpoint", "label": "Endpoint" },
+    { "id": "closure", "label": "Triage & Closure" }
+  ],
+  "templates": [
+    {
+      "id": "vt-hash-verdict",
+      "category": "malware",
+      "title": "VirusTotal hash verdict",
+      "aliases": ["vt", "virustotal", "hash", "sha256"],
+      "tags": ["virustotal", "hash", "ioc", "reputation"],
+      "placeholders": [
+        {
+          "key": "hash",
+          "label": "File hash",
+          "type": "hash",
+          "required": true,
+          "default": "{{clipboard}}",
+          "hint": "MD5, SHA-1 or SHA-256"
+        }
+      ],
+      "variants": [
+        {
+          "id": "malicious",
+          "label": "Flagged as malicious",
+          "body": "The file hash {{hash}} was submitted to VirusTotal; {{detections}} of {{total}} vendors flagged it as malicious.",
+          "placeholders": [
+            {
+              "key": "detections",
+              "label": "Detections",
+              "type": "number",
+              "required": true,
+              "min": 0
+            },
+            {
+              "key": "total",
+              "label": "Total vendors",
+              "type": "number",
+              "required": true,
+              "min": 1
+            }
+          ]
+        },
+        {
+          "id": "clean",
+          "label": "No detections",
+          "body": "The file hash {{hash}} was submitted to VirusTotal; no vendors flagged it as malicious."
+        },
+        {
+          "id": "unknown",
+          "label": "Not known to VirusTotal",
+          "body": "The file hash {{hash}} was submitted to VirusTotal; the file is not present in the dataset, so no reputation data is available."
+        }
+      ]
+    },
+    {
+      "id": "entra-signin-review",
+      "category": "identity",
+      "title": "Entra ID sign-in log review",
+      "aliases": ["entra", "azure ad", "aad", "signin", "sign-in", "login"],
+      "tags": ["logs", "identity", "authentication"],
+      "placeholders": [
+        {
+          "key": "user",
+          "label": "Affected user",
+          "type": "email",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "clean",
+          "label": "No findings",
+          "body": "Entra ID sign-in logs for {{user}} were reviewed - no indicators of malicious behaviour found."
+        },
+        {
+          "id": "suspicious",
+          "label": "Suspicious sign-ins found",
+          "body": "Entra ID sign-in logs for {{user}} show successful sign-ins from {{country}} at {{signin_time}}, inconsistent with the user's established pattern.",
+          "placeholders": [
+            {
+              "key": "country",
+              "label": "Origin country",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "signin_time",
+              "label": "Sign-in time",
+              "type": "datetime",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "unavailable",
+          "label": "Logs unavailable",
+          "body": "Entra ID sign-in logs for {{user}} could not be reviewed - no log data is available for the relevant period."
+        }
+      ]
+    },
+    {
+      "id": "account-containment",
+      "category": "identity",
+      "title": "Account containment actions taken",
+      "aliases": ["contain", "disable", "lockout", "revoke"],
+      "tags": ["containment", "identity", "response"],
+      "placeholders": [
+        {
+          "key": "user",
+          "label": "Affected user",
+          "type": "email",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "full",
+          "label": "Disabled and sessions revoked",
+          "body": "The account {{user}} has been disabled and all active sessions revoked. A password reset is required before the account is re-enabled."
+        },
+        {
+          "id": "reset-only",
+          "label": "Password reset only",
+          "body": "A password reset has been enforced on {{user}}. The account remains enabled and is being monitored."
+        },
+        {
+          "id": "pending",
+          "label": "Awaiting business approval",
+          "body": "Containment of {{user}} is on hold pending business approval; the account remains active and under monitoring."
+        }
+      ]
+    },
+    {
+      "id": "malicious-url-observed",
+      "category": "network",
+      "title": "Malicious URL observed",
+      "aliases": ["url", "link", "c2", "callback"],
+      "tags": ["ioc", "url", "network"],
+      "placeholders": [
+        {
+          "key": "url",
+          "label": "URL",
+          "type": "url",
+          "required": true,
+          "transform": ["defang"],
+          "default": "{{clipboard}}",
+          "hint": "Paste the full URL including scheme; it will be defanged automatically"
+        }
+      ],
+      "variants": [
+        {
+          "id": "blocked",
+          "label": "Connection blocked",
+          "body": "A connection attempt to {{url}} was observed and blocked by the web proxy. No successful communication took place."
+        },
+        {
+          "id": "allowed",
+          "label": "Connection succeeded",
+          "body": "A successful connection to {{url}} was observed. The endpoint has been isolated pending further analysis."
+        }
+      ]
+    },
+    {
+      "id": "ip-reputation",
+      "category": "network",
+      "title": "IP address reputation check",
+      "aliases": ["ip", "reputation", "abuseipdb", "geolocation"],
+      "tags": ["ioc", "ip", "threat-intel"],
+      "placeholders": [
+        {
+          "key": "ip",
+          "label": "IP address",
+          "type": "ip",
+          "required": true,
+          "transform": ["defang"],
+          "default": "{{clipboard}}"
+        }
+      ],
+      "variants": [
+        {
+          "id": "known-bad",
+          "label": "Known malicious",
+          "body": "The IP address {{ip}} is documented in threat intelligence sources as associated with malicious activity. It has been added to the block list."
+        },
+        {
+          "id": "no-intel",
+          "label": "No adverse intelligence",
+          "body": "The IP address {{ip}} was checked against available threat intelligence sources; no adverse reputation was found."
+        }
+      ]
+    },
+    {
+      "id": "phishing-assessment",
+      "category": "email",
+      "title": "Reported phishing email assessment",
+      "aliases": ["phish", "phishing", "reported email", "suspicious email"],
+      "tags": ["email", "phishing", "user-report"],
+      "placeholders": [
+        {
+          "key": "sender",
+          "label": "Sender address",
+          "type": "email",
+          "required": true,
+          "transform": ["defang"]
+        },
+        {
+          "key": "subject",
+          "label": "Subject line",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "confirmed",
+          "label": "Confirmed phishing",
+          "body": "The email from {{sender}} with the subject \"{{subject}}\" has been assessed as phishing. It has been removed from all affected mailboxes and the sender has been blocked."
+        },
+        {
+          "id": "spam",
+          "label": "Spam, not phishing",
+          "body": "The email from {{sender}} with the subject \"{{subject}}\" has been assessed as unsolicited bulk mail rather than a targeted phishing attempt. No further action is required."
+        },
+        {
+          "id": "legitimate",
+          "label": "Legitimate email",
+          "body": "The email from {{sender}} with the subject \"{{subject}}\" has been assessed as legitimate. The reporting user has been informed; no action is required."
+        }
+      ]
+    },
+    {
+      "id": "user-awareness-followup",
+      "category": "email",
+      "title": "User interaction follow-up",
+      "aliases": ["clicked", "credentials", "user action", "interaction"],
+      "tags": ["email", "phishing", "user"],
+      "placeholders": [
+        {
+          "key": "user",
+          "label": "User",
+          "type": "email",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "no-interaction",
+          "label": "No interaction",
+          "body": "{{user}} confirmed they did not open any attachment, follow any link, or enter credentials. No further containment is required."
+        },
+        {
+          "id": "clicked",
+          "label": "Link followed, no credentials",
+          "body": "{{user}} confirmed they followed the link but did not enter credentials. Proxy logs were reviewed to corroborate this."
+        },
+        {
+          "id": "credentials",
+          "label": "Credentials entered",
+          "body": "{{user}} confirmed they entered credentials. The account password has been reset, active sessions revoked, and sign-in activity reviewed for unauthorised access."
+        }
+      ]
+    },
+    {
+      "id": "edr-detection-triage",
+      "category": "endpoint",
+      "title": "EDR detection triage",
+      "aliases": ["edr", "detection", "alert", "defender", "crowdstrike"],
+      "tags": ["endpoint", "edr", "triage"],
+      "placeholders": [
+        {
+          "key": "host",
+          "label": "Hostname",
+          "type": "domain",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "true-positive",
+          "label": "True positive",
+          "body": "The detection on {{host}} has been confirmed as a true positive. The endpoint has been isolated and is pending remediation."
+        },
+        {
+          "id": "false-positive",
+          "label": "False positive",
+          "body": "The detection on {{host}} has been assessed as a false positive: {{reason}}. A tuning exception has been requested.",
+          "placeholders": [
+            {
+              "key": "reason",
+              "label": "Reason",
+              "type": "textarea",
+              "required": true,
+              "hint": "What legitimate activity triggered the detection?"
+            }
+          ]
+        },
+        {
+          "id": "benign-true-positive",
+          "label": "Benign true positive",
+          "body": "The activity detected on {{host}} did occur as reported, but was authorised administrative activity rather than an attack. No further action is required."
+        }
+      ]
+    },
+    {
+      "id": "host-isolation",
+      "category": "endpoint",
+      "title": "Endpoint isolation",
+      "aliases": ["isolate", "quarantine", "contain host", "network contain"],
+      "tags": ["containment", "endpoint", "response"],
+      "placeholders": [
+        {
+          "key": "host",
+          "label": "Hostname",
+          "type": "domain",
+          "required": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "isolated",
+          "label": "Isolated",
+          "body": "{{host}} has been network-isolated via the EDR console. Management connectivity is retained for investigation."
+        },
+        {
+          "id": "released",
+          "label": "Isolation released",
+          "body": "Isolation of {{host}} has been released following remediation and a clean scan. The endpoint has been returned to the user."
+        }
+      ]
+    },
+    {
+      "id": "log-review-scope",
+      "category": "closure",
+      "title": "Log review scope statement",
+      "aliases": ["scope", "reviewed", "timeframe", "hunt"],
+      "tags": ["logs", "documentation", "scope"],
+      "placeholders": [
+        {
+          "key": "source",
+          "label": "Log source",
+          "type": "text",
+          "required": true,
+          "hint": "e.g. proxy, firewall, Entra ID sign-in"
+        },
+        {
+          "key": "from",
+          "label": "From",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "key": "to",
+          "label": "To",
+          "type": "datetime",
+          "required": true
+        }
+      ],
+      "body": "{{source}} logs were reviewed for the period {{from}} to {{to}}."
+    },
+    {
+      "id": "ticket-closure",
+      "category": "closure",
+      "title": "Ticket closure statement",
+      "aliases": ["close", "closure", "resolved", "conclusion"],
+      "tags": ["documentation", "closure"],
+      "variants": [
+        {
+          "id": "no-impact",
+          "label": "Closed - no impact",
+          "body": "Investigation complete. No evidence of compromise or business impact was identified. Closing as a true positive with no impact."
+        },
+        {
+          "id": "remediated",
+          "label": "Closed - remediated",
+          "body": "Investigation complete. The identified activity has been contained and remediated, and no further malicious activity has been observed. Closing as resolved."
+        },
+        {
+          "id": "false-positive",
+          "label": "Closed - false positive",
+          "body": "Investigation complete. The alert has been assessed as a false positive; a detection tuning request has been raised. Closing as a false positive."
+        },
+        {
+          "id": "escalated",
+          "label": "Escalated",
+          "body": "This incident has been escalated to {{team}} for further investigation. Handover notes and all collected evidence have been attached to this ticket.",
+          "placeholders": [
+            {
+              "key": "team",
+              "label": "Receiving team",
+              "type": "text",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handover-note",
+      "category": "closure",
+      "title": "Shift handover note",
+      "aliases": ["handover", "handoff", "shift", "pending"],
+      "tags": ["documentation", "handover"],
+      "placeholders": [
+        {
+          "key": "status",
+          "label": "Current status",
+          "type": "enum",
+          "required": true,
+          "options": [
+            { "value": "awaiting user response", "label": "Awaiting user response" },
+            { "value": "awaiting vendor response", "label": "Awaiting vendor response" },
+            { "value": "analysis in progress", "label": "Analysis in progress" },
+            { "value": "pending approval", "label": "Pending approval" }
+          ]
+        },
+        {
+          "key": "next_step",
+          "label": "Next action",
+          "type": "textarea",
+          "required": true,
+          "hint": "What should the next analyst do first?"
+        }
+      ],
+      "body": "Handover: this incident is currently {{status}}. Next action: {{next_step}}"
+    }
+  ]
+}
